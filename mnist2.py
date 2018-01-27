@@ -17,30 +17,26 @@ BATCH_SZ = 100
 TR_SZ = len(mnist.train.images)
 NBATCHES = int(NEPOCHS * (TR_SZ / BATCH_SZ))
 
-wt_decay = 1e-5
+wt_decay = 1e-6
 max_lr = 0.003
 min_lr = 0.0001
 lr_decay_rate = 2000
 lr = tf.placeholder(tf.float32)
 
 x = tf.placeholder(tf.float32, [None, 784])
-t = tf.placeholder(tf.float32, [None, 10])      # ground-truth
+t = tf.placeholder(tf.float32, [None, 10])
 W1 = tf.Variable(tf.truncated_normal([784, NHIDDEN], stddev=0.1))
 B1 = tf.Variable(tf.constant(0.1, shape=[NHIDDEN]))
 W2 = tf.Variable(tf.truncated_normal([NHIDDEN, 10], stddev=0.1))
 B2 = tf.Variable(tf.zeros([10]))
 z = tf.nn.relu(tf.matmul(x, W1) + B1)
-#z = tf.nn.sigmoid(tf.matmul(x, W1) + B1)       # clearly worse (0.948 vs 0.958 @ 20 HU/20 epochs)
 ylogits = tf.matmul(z, W2) + B2
 cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=t, logits=ylogits))
-#train_step = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cross_entropy)
 reg_loss = cross_entropy + wt_decay * (tf.nn.l2_loss(W1) + tf.nn.l2_loss(W2))
-#train_step = tf.train.AdamOptimizer(learning_rate=0.001).minimize(reg_loss)
 train_step = tf.train.AdamOptimizer(lr).minimize(reg_loss)
 correct = tf.equal(tf.argmax(ylogits, 1), tf.argmax(t, 1))
 acc = tf.reduce_mean(tf.cast(correct, tf.float32))
 
-# Set-up
 sess = tf.Session()
 init = tf.global_variables_initializer()
 sess.run(init)
