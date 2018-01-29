@@ -39,22 +39,29 @@ tf.set_random_seed(0)
 # Download images and labels into mnist.test (10K images+labels) and mnist.train (60K images+labels)
 mnist = mnist_data.read_data_sets("../data/MNIST_data/", one_hot=True, reshape=False, validation_size=0)
 
+# Ouput dimensions
+O1 = 6
+O2 = 12
+O3 = 24
+O4 = 200
+O5 = 10
+
 # input X: 28x28 grayscale images, the first dimension (None) will index the images in the mini-batch
 X = tf.placeholder(tf.float32, [None, 28, 28, 1])
 # correct answers will go here
-Y_ = tf.placeholder(tf.float32, [None, 10])
+Y_ = tf.placeholder(tf.float32, [None, O5])
 # weights W[784, 10]   784=28*28
-W1 = tf.Variable(tf.truncated_normal([5, 5, 1, 4], stddev=0.1))
-W2 = tf.Variable(tf.truncated_normal([4, 4, 4, 8], stddev=0.1))
-W3 = tf.Variable(tf.truncated_normal([4, 4, 8, 12], stddev=0.1))
-W4 = tf.Variable(tf.truncated_normal([7 * 7 * 12, 200], stddev=0.1))
-W5 = tf.Variable(tf.truncated_normal([200, 10], stddev=0.1))
+W1 = tf.Variable(tf.truncated_normal([5, 5, 1, O1], stddev=0.1))
+W2 = tf.Variable(tf.truncated_normal([4, 4, O1, O2], stddev=0.1))
+W3 = tf.Variable(tf.truncated_normal([4, 4, O2, O3], stddev=0.1))
+W4 = tf.Variable(tf.truncated_normal([7 * 7 * O3, O4], stddev=0.1))
+W5 = tf.Variable(tf.truncated_normal([O4, O5], stddev=0.1))
 # biases 
-b1 = tf.Variable(tf.constant(0.1, shape=[4]))
-b2 = tf.Variable(tf.constant(0.1, shape=[8]))
-b3 = tf.Variable(tf.constant(0.1, shape=[12]))
-b4 = tf.Variable(tf.constant(0.1, shape=[200]))
-b5 = tf.Variable(tf.zeros([10]))
+b1 = tf.Variable(tf.constant(0.1, shape=[O1]))
+b2 = tf.Variable(tf.constant(0.1, shape=[O2]))
+b3 = tf.Variable(tf.constant(0.1, shape=[O3]))
+b4 = tf.Variable(tf.constant(0.1, shape=[O4]))
+b5 = tf.Variable(tf.zeros([O5]))
 
 # The model
 stride1 = 1
@@ -67,13 +74,16 @@ Y3cnv = tf.nn.conv2d(Y2, W3, strides=[1, stride2, stride2, 1], padding='SAME')
 Y3 = tf.nn.relu(Y3cnv + b3)
 
 # Flatten output of last convolutional layer for input to the fully-connected layer
-Y3flat = tf.reshape(Y3, shape=[-1, 7 * 7 * 12])
+Y3flat = tf.reshape(Y3, shape=[-1, 7 * 7 * O3])
 
 # fully-connected layer
+DROPOUT = 0.75
+pkeep = tf.placeholder(tf.float32)
 Y4 = tf.nn.relu(tf.matmul(Y3flat, W4) + b4)
+Y4d = tf.nn.dropout(Y4, pkeep)
 
 # softmax layer
-Ylogits = tf.matmul(Y4, W5) + b5
+Ylogits = tf.matmul(Y4d, W5) + b5
 Y = tf.nn.softmax(Ylogits)
 
 # loss function: cross-entropy = - sum( Y_i * log(Yi) )
@@ -101,8 +111,18 @@ lr = tf.placeholder(tf.float32)
 train_step = tf.train.AdamOptimizer(lr).minimize(cross_entropy)
 
 # matplotlib visualisation
-allweights = tf.reshape(W2, [-1])
-allbiases = tf.reshape(b2, [-1])
+allweights = tf.concat([tf.reshape(W1, [-1]), 
+                        tf.reshape(W2, [-1]),
+                        tf.reshape(W3, [-1]),
+                        tf.reshape(W4, [-1]),
+                        tf.reshape(W5, [-1])],
+                        0)
+allbiases = tf.concat([tf.reshape(b1, [-1]),
+                       tf.reshape(b2, [-1]),
+                       tf.reshape(b3, [-1]),
+                       tf.reshape(b4, [-1]),
+                       tf.reshape(b5, [-1])],
+                       0)
 I = tensorflowvisu.tf_format_mnist_images(X, Y, Y_)  # assembles 10x10 images by default
 It = tensorflowvisu.tf_format_mnist_images(X, Y, Y_, 1000, lines=25)  # 1000 images on 25 lines
 datavis = tensorflowvisu.MnistDataVis()
@@ -121,7 +141,7 @@ def training_step(i, update_test_data, update_train_data):
 
     # compute training values for visualisation
     if update_train_data:
-        a, c, im, w, b = sess.run([accuracy, cross_entropy, I, allweights, allbiases], feed_dict={X: batch_X, Y_: batch_Y})
+        a, c, im, w, b = sess.run([accuracy, cross_entropy, I, allweights, allbiases], feed_dict={X: batch_X, Y_: batch_Y, pkeep: 1.0})
         datavis.append_training_curves_data(i, a, c)
         datavis.append_data_histograms(i, w, b)
         datavis.update_image1(im)
@@ -129,7 +149,7 @@ def training_step(i, update_test_data, update_train_data):
 
     # compute test values for visualisation
     if update_test_data:
-        a, c, im = sess.run([accuracy, cross_entropy, It], feed_dict={X: mnist.test.images, Y_: mnist.test.labels})
+        a, c, im = sess.run([accuracy, cross_entropy, It], feed_dict={X: mnist.test.images, Y_: mnist.test.labels, pkeep: 1.0})
         datavis.append_test_curves_data(i, a, c)
         datavis.update_image2(im)
         print(str(i) + ": ********* epoch " + str(i*100//mnist.train.images.shape[0]+1) + " ********* test accuracy:" + str(a) + " test loss: " + str(c))
@@ -137,7 +157,7 @@ def training_step(i, update_test_data, update_train_data):
     # compute learning rate
     learn_rate = MINLR + (MAXLR - MINLR) * math.exp(-i/LRDECAY)
     # the backpropagation training step
-    sess.run(train_step, feed_dict={X: batch_X, Y_: batch_Y, lr: learn_rate})
+    sess.run(train_step, feed_dict={X: batch_X, Y_: batch_Y, lr: learn_rate, pkeep: DROPOUT})
 
 
 datavis.animate(training_step, iterations=10000+1, train_data_update_freq=50, test_data_update_freq=50, one_test_at_start=False)
