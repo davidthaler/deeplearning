@@ -49,8 +49,8 @@ W1 = tf.Variable(tf.truncated_normal([28 * 28, N1], stddev=0.1))
 W2 = tf.Variable(tf.truncated_normal([N1, N2], stddev=0.1))
 W3 = tf.Variable(tf.truncated_normal([N2, 10], stddev=0.1))
 # biases b[10]
-b1 = tf.Variable(tf.zeros([N1]))
-b2 = tf.Variable(tf.zeros([N2]))
+b1 = tf.Variable(tf.constant(0.1, shape=[N1]))
+b2 = tf.Variable(tf.constant(0.1, shape=[N2]))
 b3 = tf.Variable(tf.zeros([10]))
 
 # flatten the images into a single line of pixels
@@ -58,9 +58,10 @@ b3 = tf.Variable(tf.zeros([10]))
 XX = tf.reshape(X, [-1, 784])
 
 # The model
-Z1 = tf.nn.sigmoid(tf.matmul(XX, W1) + b1)
-Z2 = tf.nn.sigmoid(tf.matmul(Z1, W2) + b2)
-Y = tf.nn.softmax(tf.matmul(Z2, W3) + b3)
+Z1 = tf.nn.relu(tf.matmul(XX, W1) + b1)
+Z2 = tf.nn.relu(tf.matmul(Z1, W2) + b2)
+Ylogits = tf.matmul(Z2, W3) + b3
+Y = tf.nn.softmax(Ylogits)
 
 # loss function: cross-entropy = - sum( Y_i * log(Yi) )
 #                           Y: the computed output vector
@@ -70,15 +71,17 @@ Y = tf.nn.softmax(tf.matmul(Z2, W3) + b3)
 # log takes the log of each element, * multiplies the tensors element by element
 # reduce_mean will add all the components in the tensor
 # so here we end up with the total cross-entropy for all images in the batch
-cross_entropy = -tf.reduce_mean(Y_ * tf.log(Y)) * 1000.0  # normalized for batches of 100 images,
+#cross_entropy = -tf.reduce_mean(Y_ * tf.log(Y)) * 1000.0  # normalized for batches of 100 images,
                                                           # *10 because  "mean" included an unwanted division by 10
+cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=Ylogits, labels=Y_)
+cross_entropy = tf.reduce_mean(cross_entropy) * 100
 
 # accuracy of the trained model, between 0 (worst) and 1 (best)
 correct_prediction = tf.equal(tf.argmax(Y, 1), tf.argmax(Y_, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 # training, learning rate = 0.005
-train_step = tf.train.GradientDescentOptimizer(0.005).minimize(cross_entropy)
+train_step = tf.train.AdamOptimizer(0.003).minimize(cross_entropy)
 
 # matplotlib visualisation
 allweights = tf.reshape(W2, [-1])
