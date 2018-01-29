@@ -38,22 +38,29 @@ tf.set_random_seed(0)
 
 # Download images and labels into mnist.test (10K images+labels) and mnist.train (60K images+labels)
 mnist = mnist_data.read_data_sets("../data/MNIST_data/", one_hot=True, reshape=False, validation_size=0)
-
+N1 = 200
+N2 = 100
 # input X: 28x28 grayscale images, the first dimension (None) will index the images in the mini-batch
 X = tf.placeholder(tf.float32, [None, 28, 28, 1])
 # correct answers will go here
 Y_ = tf.placeholder(tf.float32, [None, 10])
 # weights W[784, 10]   784=28*28
-W = tf.Variable(tf.zeros([784, 10]))
+W1 = tf.Variable(tf.truncated_normal([28 * 28, N1], stddev=0.1))
+W2 = tf.Variable(tf.truncated_normal([N1, N2], stddev=0.1))
+W3 = tf.Variable(tf.truncated_normal([N2, 10], stddev=0.1))
 # biases b[10]
-b = tf.Variable(tf.zeros([10]))
+b1 = tf.Variable(tf.zeros([N1]))
+b2 = tf.Variable(tf.zeros([N2]))
+b3 = tf.Variable(tf.zeros([10]))
 
 # flatten the images into a single line of pixels
 # -1 in the shape definition means "the only possible dimension that will preserve the number of elements"
 XX = tf.reshape(X, [-1, 784])
 
 # The model
-Y = tf.nn.softmax(tf.matmul(XX, W) + b)
+Z1 = tf.nn.sigmoid(tf.matmul(XX, W1) + b1)
+Z2 = tf.nn.sigmoid(tf.matmul(Z1, W2) + b2)
+Y = tf.nn.softmax(tf.matmul(Z2, W3) + b3)
 
 # loss function: cross-entropy = - sum( Y_i * log(Yi) )
 #                           Y: the computed output vector
@@ -74,8 +81,8 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 train_step = tf.train.GradientDescentOptimizer(0.005).minimize(cross_entropy)
 
 # matplotlib visualisation
-allweights = tf.reshape(W, [-1])
-allbiases = tf.reshape(b, [-1])
+allweights = tf.reshape(W2, [-1])
+allbiases = tf.reshape(b2, [-1])
 I = tensorflowvisu.tf_format_mnist_images(X, Y, Y_)  # assembles 10x10 images by default
 It = tensorflowvisu.tf_format_mnist_images(X, Y, Y_, 1000, lines=25)  # 1000 images on 25 lines
 datavis = tensorflowvisu.MnistDataVis()
@@ -111,7 +118,7 @@ def training_step(i, update_test_data, update_train_data):
     sess.run(train_step, feed_dict={X: batch_X, Y_: batch_Y})
 
 
-datavis.animate(training_step, iterations=2000+1, train_data_update_freq=10, test_data_update_freq=50, more_tests_at_start=True)
+datavis.animate(training_step, iterations=10000+1, train_data_update_freq=10, test_data_update_freq=50, more_tests_at_start=True)
 
 # to save the animation as a movie, add save_movie=True as an argument to datavis.animate
 # to disable the visualisation use the following line instead of the datavis.animate line
