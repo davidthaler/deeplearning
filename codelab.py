@@ -58,9 +58,12 @@ b3 = tf.Variable(tf.zeros([10]))
 XX = tf.reshape(X, [-1, 784])
 
 # The model
+pkeep = tf.placeholder(tf.float32)          # dropout keep param: 0.75 train; 1.0 test
 Z1 = tf.nn.relu(tf.matmul(XX, W1) + b1)
-Z2 = tf.nn.relu(tf.matmul(Z1, W2) + b2)
-Ylogits = tf.matmul(Z2, W3) + b3
+Z1d = tf.nn.dropout(Z1, pkeep)
+Z2 = tf.nn.relu(tf.matmul(Z1d, W2) + b2)
+Z2d = tf.nn.dropout(Z2, pkeep)
+Ylogits = tf.matmul(Z2d, W3) + b3
 Y = tf.nn.softmax(Ylogits)
 
 # loss function: cross-entropy = - sum( Y_i * log(Yi) )
@@ -108,7 +111,7 @@ def training_step(i, update_test_data, update_train_data):
 
     # compute training values for visualisation
     if update_train_data:
-        a, c, im, w, b = sess.run([accuracy, cross_entropy, I, allweights, allbiases], feed_dict={X: batch_X, Y_: batch_Y})
+        a, c, im, w, b = sess.run([accuracy, cross_entropy, I, allweights, allbiases], feed_dict={X: batch_X, Y_: batch_Y, pkeep:1.0})
         datavis.append_training_curves_data(i, a, c)
         datavis.append_data_histograms(i, w, b)
         datavis.update_image1(im)
@@ -116,7 +119,7 @@ def training_step(i, update_test_data, update_train_data):
 
     # compute test values for visualisation
     if update_test_data:
-        a, c, im = sess.run([accuracy, cross_entropy, It], feed_dict={X: mnist.test.images, Y_: mnist.test.labels})
+        a, c, im = sess.run([accuracy, cross_entropy, It], feed_dict={X: mnist.test.images, Y_: mnist.test.labels, pkeep:1.0})
         datavis.append_test_curves_data(i, a, c)
         datavis.update_image2(im)
         print(str(i) + ": ********* epoch " + str(i*100//mnist.train.images.shape[0]+1) + " ********* test accuracy:" + str(a) + " test loss: " + str(c))
@@ -124,7 +127,7 @@ def training_step(i, update_test_data, update_train_data):
     # compute learning rate
     learn_rate = MINLR + (MAXLR - MINLR) * math.exp(-i/LRDECAY)
     # the backpropagation training step
-    sess.run(train_step, feed_dict={X: batch_X, Y_: batch_Y, lr: learn_rate})
+    sess.run(train_step, feed_dict={X: batch_X, Y_: batch_Y, lr: learn_rate, pkeep: 0.75})
 
 
 datavis.animate(training_step, iterations=10000+1, train_data_update_freq=50, test_data_update_freq=50, one_test_at_start=False)
