@@ -127,7 +127,7 @@ def training_step(i, update_test_data, update_train_data):
     sess.run(train_step, feed_dict={X: batch_X, Y_: batch_Y, lr: learn_rate})
 
 
-datavis.animate(training_step, iterations=10000+1, train_data_update_freq=10, test_data_update_freq=50, more_tests_at_start=True)
+datavis.animate(training_step, iterations=10000+1, train_data_update_freq=50, test_data_update_freq=50, one_test_at_start=False)
 
 # to save the animation as a movie, add save_movie=True as an argument to datavis.animate
 # to disable the visualisation use the following line instead of the datavis.animate line
