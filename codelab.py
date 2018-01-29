@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import math
 import tensorflow as tf
 import tensorflowvisu
 from tensorflow.examples.tutorials.mnist import input_data as mnist_data
@@ -81,7 +81,11 @@ correct_prediction = tf.equal(tf.argmax(Y, 1), tf.argmax(Y_, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 # training, learning rate = 0.005
-train_step = tf.train.AdamOptimizer(0.003).minimize(cross_entropy)
+MAXLR = 0.003
+MINLR = 0.0001
+LRDECAY = 2000
+lr = tf.placeholder(tf.float32)
+train_step = tf.train.AdamOptimizer(lr).minimize(cross_entropy)
 
 # matplotlib visualisation
 allweights = tf.reshape(W2, [-1])
@@ -117,8 +121,10 @@ def training_step(i, update_test_data, update_train_data):
         datavis.update_image2(im)
         print(str(i) + ": ********* epoch " + str(i*100//mnist.train.images.shape[0]+1) + " ********* test accuracy:" + str(a) + " test loss: " + str(c))
 
+    # compute learning rate
+    learn_rate = MINLR + (MAXLR - MINLR) * math.exp(-i/LRDECAY)
     # the backpropagation training step
-    sess.run(train_step, feed_dict={X: batch_X, Y_: batch_Y})
+    sess.run(train_step, feed_dict={X: batch_X, Y_: batch_Y, lr: learn_rate})
 
 
 datavis.animate(training_step, iterations=10000+1, train_data_update_freq=10, test_data_update_freq=50, more_tests_at_start=True)
