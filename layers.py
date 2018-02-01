@@ -12,17 +12,14 @@ from tensorflow.examples.tutorials.mnist import input_data
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
-# Constants
 NFIL1 = 16
 NFIL2 = 32
 NDENSE = 128
-DROP = 0.4
-LR = 0.001
 BATCH_SZ = 100
 MODEL_DIR = '/tmp/layers_example'
 
 # It might also need a weights initializer
-def cnn_model_fn(features, labels, mode):
+def cnn_model_fn(features, labels, mode, params):
     input_layer = tf.reshape(features['x'], [-1, 28, 28, 1])
     biasInit = tf.constant_initializer(0.1, tf.float32)
     conv1 = tf.layers.conv2d(
@@ -51,7 +48,7 @@ def cnn_model_fn(features, labels, mode):
                             activation=tf.nn.relu,
                             bias_initializer=biasInit)
     dropout = tf.layers.dropout(inputs=dense,
-                                rate=DROP,
+                                rate=params['dropout'],
                                 training=(mode==tf.estimator.ModeKeys.TRAIN))
     logits = tf.layers.dense(inputs=dropout, units=10)
 
@@ -74,7 +71,7 @@ def cnn_model_fn(features, labels, mode):
 
     # train op for TRAIN mode
     if mode == tf.estimator.ModeKeys.TRAIN:
-        optimizer = tf.train.AdamOptimizer(learning_rate=LR)
+        optimizer = tf.train.AdamOptimizer(learning_rate=params['learn_rate'])
         train_op = optimizer.minimize(loss=loss, 
                                       global_step=tf.train.get_global_step())
         return tf.estimator.EstimatorSpec(mode=mode, 
@@ -95,8 +92,11 @@ def main(args):
     eval_data = mnist.test.images
     eval_labels = mnist.test.labels.astype(np.int32)
 
+    params = {'dropout': args.dropout,
+              'learn_rate': args.learn_rate}
     mnist_classifier = tf.estimator.Estimator(model_fn=cnn_model_fn,
-                                              model_dir=MODEL_DIR)
+                                              model_dir=MODEL_DIR,
+                                              params=params)
     
     tr_input_fn = tf.estimator.inputs.numpy_input_fn(
         x = {'x': train_data},
@@ -126,7 +126,9 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run train/eval pass on MNIST data.')
     parser.add_argument('--epochs', type=int, default=1, help='number of training epochs')
-    parser.add_argument('--dropout', type=float, default=0.5, help='dropout rate; 0.0 is no dropout')
+    parser.add_argument('--dropout', type=float, default=0.5, 
+        help='dropout rate, not retention rate; 0.0 is no dropout; default 0.5')
+    parser.add_argument('--learn_rate', type=float, default=0.001, help='Learning rate; default 0.001')
     args, _ = parser.parse_known_args(sys.argv)
     # TODO: kill the model tree, if present
     main(args)
