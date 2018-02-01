@@ -20,7 +20,6 @@ BATCH_SZ = 100
 NUM_EPOCHS = 3
 MODEL_DIR = '/tmp/layers_example'
 
-# I'm pretty sure this needs a bias initializer
 # It might also need a weights initializer
 def cnn_model_fn(features, labels, mode):
     input_layer = tf.reshape(features['x'], [-1, 28, 28, 1])
@@ -28,22 +27,22 @@ def cnn_model_fn(features, labels, mode):
     conv1 = tf.layers.conv2d(
         inputs=input_layer,
         filters=NFIL1,
-        kernel_size=[5, 5],             # try changing to just 5
+        kernel_size=5,
         padding='same',
         activation=tf.nn.relu,
         bias_initializer=biasInit)
     pool1 = tf.layers.max_pooling2d(inputs=conv1, 
-                                    pool_size=[2, 2],   # try just 2
+                                    pool_size=2,
                                     strides=2)
     conv2 = tf.layers.conv2d(
         inputs=pool1,
         filters=NFIL2,
-        kernel_size=[5, 5],
+        kernel_size=5,
         padding='same',
         activation=tf.nn.relu,
         bias_initializer=biasInit)
     pool2 = tf.layers.max_pooling2d(inputs=conv2,
-                                    pool_size=[2, 2],
+                                    pool_size=2,
                                     strides=2)
     pool2flat = tf.reshape(pool2, shape=[-1, 7 * 7 * NFIL2])
     dense = tf.layers.dense(inputs=pool2flat,
@@ -67,6 +66,10 @@ def cnn_model_fn(features, labels, mode):
     # Loss used in EVAL and TRAIN modes
     loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
     acc = tf.metrics.accuracy(labels=labels, predictions=predictions['classes'])
+    tf.summary.scalar('accuracy', acc[1])
+    tf.summary.histogram('logits', logits)
+    tf.summary.histogram('pool1', pool1)
+    tf.summary.histogram('pool2', pool2)
 
     # train op for TRAIN mode
     if mode == tf.estimator.ModeKeys.TRAIN:
@@ -102,14 +105,9 @@ def main():
         shuffle=True
     )
 
-    #tensors_to_log = {'probabilities': 'softmax_tensor'}
-    #logging_hook = tf.train.SummarySaverHook(tensors=tensors_to_log, every_n_iter=100)
-
     tr_size = len(mnist.train.labels)
     batch_per_epoch = int(tr_size / BATCH_SZ)
     num_batches = NUM_EPOCHS * batch_per_epoch
-    mnist_classifier.train(input_fn=tr_input_fn,
-                           steps=num_batches)
 
     eval_input_fn = tf.estimator.inputs.numpy_input_fn(
         x = {'x': eval_data},
@@ -117,12 +115,12 @@ def main():
         num_epochs=1,
         shuffle=False
     )
-    raw_preds = mnist_classifier.predict(input_fn=eval_input_fn)
-    preds = [cl['classes'] for cl in raw_preds]
-    print(preds[:500:20])
-    print(eval_labels[:500:20].tolist())
-    eval_results = mnist_classifier.evaluate(input_fn=eval_input_fn)
-    print(eval_results)
+
+    for i in range(NUM_EPOCHS):
+        mnist_classifier.train(input_fn=tr_input_fn,
+                               steps=batch_per_epoch)
+        eval_results = mnist_classifier.evaluate(input_fn=eval_input_fn)
+        print(eval_results)
 
 
 if __name__ == '__main__':
