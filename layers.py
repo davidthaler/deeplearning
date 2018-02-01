@@ -5,6 +5,8 @@
 #
 # Date: 29-01-2018
 import sys
+import os
+import shutil
 import argparse
 import numpy as np
 import tensorflow as tf
@@ -16,9 +18,7 @@ NFIL1 = 16
 NFIL2 = 32
 NDENSE = 128
 BATCH_SZ = 100
-MODEL_DIR = '/tmp/layers_example'
 
-# It might also need a weights initializer
 def cnn_model_fn(features, labels, mode, params):
     input_layer = tf.reshape(features['x'], [-1, 28, 28, 1])
     biasInit = tf.constant_initializer(0.1, tf.float32)
@@ -95,7 +95,7 @@ def main(args):
     params = {'dropout': args.dropout,
               'learn_rate': args.learn_rate}
     mnist_classifier = tf.estimator.Estimator(model_fn=cnn_model_fn,
-                                              model_dir=MODEL_DIR,
+                                              model_dir=args.model_dir,
                                               params=params)
     
     tr_input_fn = tf.estimator.inputs.numpy_input_fn(
@@ -124,11 +124,18 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Run train/eval pass on MNIST data.')
-    parser.add_argument('--epochs', type=int, default=1, help='number of training epochs')
+    parser = argparse.ArgumentParser(description='Run train/eval on MNIST')
+    parser.add_argument('--epochs', type=int, default=1,
+        help='number of training epochs')
     parser.add_argument('--dropout', type=float, default=0.5, 
-        help='dropout rate, not retention rate; 0.0 is no dropout; default 0.5')
-    parser.add_argument('--learn_rate', type=float, default=0.001, help='Learning rate; default 0.001')
+        help='dropout rate (not retention); 0.0 is no dropout; default 0.5')
+    parser.add_argument('--learn_rate', type=float, default=0.001,
+        help='Learning rate; default 0.001')
+    parser.add_argument('--name', default='',
+        help='model directory is <base_dir>/<name>; default '' for <base_dir>')
+    parser.add_argument('--base_dir', default='/tmp/layers_example',
+        help='base of estimator model_dir; default /tmp/layers_example/')
     args, _ = parser.parse_known_args(sys.argv)
+    args.model_dir = os.path.join(args.base_dir, args.name, '')
     # TODO: kill the model tree, if present
     main(args)
