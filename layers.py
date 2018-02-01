@@ -8,16 +8,16 @@ import sys
 import os
 import shutil
 import argparse
+from string import Template
 import numpy as np
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
-
-tf.logging.set_verbosity(tf.logging.INFO)
 
 NFIL1 = 16
 NFIL2 = 32
 NDENSE = 128
 BATCH_SZ = 100
+RESULTS = Template('Iter: $global_step   Loss: $loss   Accuracy: $accuracy')
 
 def cnn_model_fn(features, labels, mode, params):
     input_layer = tf.reshape(features['x'], [-1, 28, 28, 1])
@@ -120,7 +120,7 @@ def main(args):
         mnist_classifier.train(input_fn=tr_input_fn,
                                steps=batch_per_epoch)
         eval_results = mnist_classifier.evaluate(input_fn=eval_input_fn)
-        print(eval_results)
+        print(RESULTS.substitute(eval_results))
 
 
 if __name__ == '__main__':
@@ -135,7 +135,16 @@ if __name__ == '__main__':
         help='model directory is <base_dir>/<name>; default '' for <base_dir>')
     parser.add_argument('--base_dir', default='/tmp/layers_example',
         help='base of estimator model_dir; default /tmp/layers_example/')
+    parser.add_argument('--overwrite', action='store_true',
+        help='Overwrite any model at <base_dir>/<name>, ' 
+            + 'otherwise continue training it, if present')
+    parser.add_argument('--quiet', action='store_true', 
+        help='emit minimal logging information')
     args, _ = parser.parse_known_args(sys.argv)
     args.model_dir = os.path.join(args.base_dir, args.name, '')
-    # TODO: kill the model tree, if present
+    if not args.quiet:
+        tf.logging.set_verbosity(tf.logging.INFO)
+    if os.path.exists(args.model_dir):
+        if args.overwrite:
+            shutil.rmtree(args.model_dir)
     main(args)
