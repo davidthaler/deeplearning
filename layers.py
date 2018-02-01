@@ -4,6 +4,8 @@
 # This is an alternate MNIST CNN.
 #
 # Date: 29-01-2018
+import sys
+import argparse
 import numpy as np
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
@@ -17,7 +19,6 @@ NDENSE = 128
 DROP = 0.4
 LR = 0.001
 BATCH_SZ = 100
-NUM_EPOCHS = 3
 MODEL_DIR = '/tmp/layers_example'
 
 # It might also need a weights initializer
@@ -87,7 +88,7 @@ def cnn_model_fn(features, labels, mode):
                                           loss=loss,
                                           eval_metric_ops=eval_metric_ops)
 
-def main():
+def main(args):
     mnist = input_data.read_data_sets('../data/MNIST_data/', validation_size=0)
     train_data = mnist.train.images
     train_labels = mnist.train.labels.astype(np.int32)
@@ -107,7 +108,6 @@ def main():
 
     tr_size = len(mnist.train.labels)
     batch_per_epoch = int(tr_size / BATCH_SZ)
-    num_batches = NUM_EPOCHS * batch_per_epoch
 
     eval_input_fn = tf.estimator.inputs.numpy_input_fn(
         x = {'x': eval_data},
@@ -116,7 +116,7 @@ def main():
         shuffle=False
     )
 
-    for i in range(NUM_EPOCHS):
+    for i in range(args.epochs):
         mnist_classifier.train(input_fn=tr_input_fn,
                                steps=batch_per_epoch)
         eval_results = mnist_classifier.evaluate(input_fn=eval_input_fn)
@@ -124,5 +124,9 @@ def main():
 
 
 if __name__ == '__main__':
-    # TODO: kill the model tree
-    main()
+    parser = argparse.ArgumentParser(description='Run train/eval pass on MNIST data.')
+    parser.add_argument('--epochs', type=int, default=1, help='number of training epochs')
+    parser.add_argument('--dropout', type=float, default=0.5, help='dropout rate; 0.0 is no dropout')
+    args, _ = parser.parse_known_args(sys.argv)
+    # TODO: kill the model tree, if present
+    main(args)
