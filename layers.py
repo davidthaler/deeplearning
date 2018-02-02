@@ -26,7 +26,7 @@ def cnn_model_fn(features, labels, mode, params):
         inputs=input_layer,
         filters=NFIL1,
         kernel_size=5,
-        padding='same',
+        padding='valid',
         activation=tf.nn.relu,
         bias_initializer=biasInit)
     pool1 = tf.layers.max_pooling2d(inputs=conv1, 
@@ -36,13 +36,14 @@ def cnn_model_fn(features, labels, mode, params):
         inputs=pool1,
         filters=NFIL2,
         kernel_size=5,
-        padding='same',
+        padding='valid',
         activation=tf.nn.relu,
         bias_initializer=biasInit)
     pool2 = tf.layers.max_pooling2d(inputs=conv2,
                                     pool_size=2,
                                     strides=2)
-    pool2flat = tf.reshape(pool2, shape=[-1, 7 * 7 * NFIL2])
+    #pool2flat = tf.reshape(pool2, shape=[-1, 7 * 7 * NFIL2])
+    pool2flat = tf.reshape(pool2, shape=[-1, 4 * 4 * NFIL2])
     dense = tf.layers.dense(inputs=pool2flat,
                             units=NDENSE,
                             activation=tf.nn.relu,
