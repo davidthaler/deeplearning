@@ -1,4 +1,5 @@
 # First crack at cifar10 with keras
+# At end of first day, this gets just under 70% test in 10 epochs at defaults.
 #
 # Date: 03-Feb-2018
 import os
@@ -30,7 +31,11 @@ def main(args):
                      activation='relu'))
     model.add(MaxPooling2D())
     model.add(Conv2D(filters=args.filters2,
-                     kernel_size=5,
+                     kernel_size=3,
+                     activation='relu'))
+    model.add(MaxPooling2D())
+    model.add(Conv2D(filters=args.filters3,
+                     kernel_size=3,
                      activation='relu'))
     model.add(MaxPooling2D())
     model.add(Flatten())
@@ -60,10 +65,12 @@ if __name__ == '__main__':
         help='number of training epochs; default 1')
     parser.add_argument('--dropout', type=float, default=0.5, 
         help='dropout rate (not retention); 0.0 is no dropout; default 0.5')
-    parser.add_argument('--filters1', type=int, default=16,
+    parser.add_argument('--filters1', type=int, default=32,
         help='Number of filters in first convolutional layer; default 16')
-    parser.add_argument('--filters2', type=int, default=32,
+    parser.add_argument('--filters2', type=int, default=64,
         help='Number of filters in second convolutional layer; default 32')
+    parser.add_argument('--filters3', type=int, default=128,
+        help='Number of filters in second convolutional layer; default 64')
     parser.add_argument('--dense', type=int, default=128,
         help='Number of units in dense, fully-connected layer; default 128')
     parser.add_argument('--name', default='',
