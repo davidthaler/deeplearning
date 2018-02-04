@@ -1,12 +1,15 @@
 # First crack at cifar10 with keras
 #
 # Date: 03-Feb-2018
+import os
 import sys
 import argparse
 from keras.datasets import cifar10
 from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
 from keras.utils import to_categorical
+from keras.callbacks import TensorBoard
+
 
 def get_cifar():
     (xtr, ytr), (xte, yte) = cifar10.load_data()
@@ -37,7 +40,16 @@ def main(args):
     model.compile(optimizer='adam',
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
-    model.fit(xtr, ytr, epochs=args.epochs)
+    callbacks = None
+    if args.name != '':
+        log_dir = os.path.join(args.base_dir, args.name, '')
+        histogram = 1 if (args.histogram and args.validation > 0.0) else 0
+        callback = TensorBoard(log_dir=log_dir, histogram_freq=histogram)
+        callbacks = [callback]
+    model.fit(xtr, ytr, 
+              epochs=args.epochs,
+              validation_split=args.validation,
+              callbacks=callbacks)
     results = model.evaluate(xte, yte)
     return results
 
@@ -54,6 +66,14 @@ if __name__ == '__main__':
         help='Number of filters in second convolutional layer; default 32')
     parser.add_argument('--dense', type=int, default=128,
         help='Number of units in dense, fully-connected layer; default 128')
+    parser.add_argument('--name', default='',
+        help='model directory is <base_dir>/<name>; default '' for <base_dir>')
+    parser.add_argument('--base_dir', default='/tmp/cifar10/',
+        help='base of estimator model_dir; default /tmp/cifar10/')
+    parser.add_argument('--validation', type=float, default=0.0, 
+        help='fraction of training data to use for validation; default 0.0')
+    parser.add_argument('--histogram', action='store_true',
+        help='log histograms for TensorBoard; validation must be set to > 0')
     args, _ = parser.parse_known_args()
     results = main(args)
     print('Loss: %.4f   Acc: %.4f' % tuple(results))
