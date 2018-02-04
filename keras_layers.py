@@ -71,6 +71,7 @@ if __name__ == '__main__':
         help='Number of filters in second convolutional layer; default 32')
     parser.add_argument('--dense', type=int, default=128,
         help='Number of units in dense, fully-connected layer; default 128')
+    # 0.0 seemed best in a handful of experiments
     parser.add_argument('--init', type=float, default=0.0,
         help='Bias initializer value for relu layers; default 0.0.')
     args, _ = parser.parse_known_args(sys.argv)
