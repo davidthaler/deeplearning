@@ -7,7 +7,8 @@ import sys
 import argparse
 from keras.datasets import cifar10
 from keras.models import Sequential
-from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from keras.layers import Conv2D, MaxPooling2D, Dense, Dropout
+from keras.layers import Flatten, Activation, BatchNormalization
 from keras.utils import to_categorical
 from keras.callbacks import TensorBoard
 
@@ -27,21 +28,33 @@ def main(args):
     model = Sequential()
     model.add(Conv2D(input_shape=(32, 32, 3),
                      filters=args.filters1,
-                     kernel_size=5,
-                     activation='relu'))
+                     kernel_size=5))
+    if args.batchnorm:
+        model.add(BatchNormalization(scale=False))
+    model.add(Activation('relu'))
     model.add(MaxPooling2D())
     model.add(Conv2D(filters=args.filters2,
-                     kernel_size=3,
-                     activation='relu'))
+                     kernel_size=3))
+    if args.batchnorm:
+        model.add(BatchNormalization(scale=False))
+    model.add(Activation('relu'))
     model.add(MaxPooling2D())
     model.add(Conv2D(filters=args.filters3,
-                     kernel_size=3,
-                     activation='relu'))
+                     kernel_size=3))
+    if args.batchnorm:
+        model.add(BatchNormalization(scale=False))
+    model.add(Activation('relu'))
     model.add(MaxPooling2D())
     model.add(Flatten())
-    model.add(Dense(args.dense, activation='relu'))
+    model.add(Dense(args.dense))
+    if args.batchnorm:
+        model.add(BatchNormalization(scale=False))
+    model.add(Activation('relu'))
     model.add(Dropout(rate=args.dropout))
-    model.add(Dense(10, activation='softmax'))
+    model.add(Dense(10))
+    if args.batchnorm:
+        model.add(BatchNormalization(scale=False))
+    model.add(Activation('softmax'))
     model.compile(optimizer='adam',
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
@@ -49,9 +62,9 @@ def main(args):
     if args.name != '':
         log_dir = os.path.join(args.base_dir, args.name, '')
         histogram = 1 if (args.histogram and args.validation > 0.0) else 0
-        callback = TensorBoard(log_dir=log_dir, histogram_freq=histogram)
-        callbacks = [callback]
-    model.fit(xtr, ytr, 
+        callbacks = [TensorBoard(log_dir=log_dir, histogram_freq=histogram)]
+    model.fit(xtr, ytr,
+              batch_size=args.batch_sz,
               epochs=args.epochs,
               validation_split=args.validation,
               callbacks=callbacks)
@@ -61,6 +74,8 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Do train/eval on cifar10')
+    parser.add_argument('--batch_sz', type=int, default=100,
+        help='training batch size; default 100')
     parser.add_argument('--epochs', type=int, default=1,
         help='number of training epochs; default 1')
     parser.add_argument('--dropout', type=float, default=0.5, 
@@ -81,6 +96,8 @@ if __name__ == '__main__':
         help='fraction of training data to use for validation; default 0.0')
     parser.add_argument('--histogram', action='store_true',
         help='log histograms for TensorBoard; validation must be set to > 0')
+    parser.add_argument('--batchnorm', action='store_true', 
+        help='Apply batchnorm on all layers')
     args, _ = parser.parse_known_args()
     results = main(args)
     print('Loss: %.4f   Acc: %.4f' % tuple(results))
