@@ -1,7 +1,9 @@
 # Second attempt at Cifar10 data. This time with data augmentation.
+# Gets 80 at 45-50 epochs when called with:
+# >> python cifar_aug_cnn.py --width_shift 0.1 --height_shift 0.1 
+# --dropout 0.25 --epochs 50 --rotate 5 --zoom 0.1
 #
 # Date 06-Feb-2018
-import sys
 import os
 import argparse
 from keras.datasets import cifar10
@@ -23,7 +25,9 @@ def get_cifar():
 def get_datagen(xtr, args):
     datagen = ImageDataGenerator(horizontal_flip=True,
                                  width_shift_range=args.width_shift,
-                                 height_shift_range=args.height_shift)
+                                 height_shift_range=args.height_shift,
+                                 zoom_range=args.zoom,
+                                 rotation_range=args.rotate)
     # fit not needed if no statistics are computed.
     # datagen.fit(xtr)
     return datagen
@@ -67,6 +71,10 @@ def run(args):
 if __name__ == '__main__':
     DESC = 'Run train/eval on Cifar10 with data augmentation'
     parser = argparse.ArgumentParser(DESC)
+    parser.add_argument('--zoom', type=float, default=0.0,
+        help='float zoom range; scaled to 1 +- zoom; default 0.0')
+    parser.add_argument('--rotate', type=int, default=0,
+        help='int rotation range in degrees; default 0')
     parser.add_argument('--height_shift', type=float, default=0.0,
         help='range for random vertical shifts in data augmentation;'+
              'default 0.0 for no shift')
@@ -77,16 +85,16 @@ if __name__ == '__main__':
         help='training batch size; default 100')
     parser.add_argument('--epochs', type=int, default=1,
         help='number of training epochs; default 1')
-    parser.add_argument('--dropout', type=float, default=0.5, 
-        help='dropout rate (not retention); 0.0 is no dropout; default 0.5')
+    parser.add_argument('--dropout', type=float, default=0.25, 
+        help='dropout rate (not retention); 0.0 is no dropout; default 0.25')
     parser.add_argument('--filters1', type=int, default=32,
         help='Number of filters in first convolutional layer; default 32')
     parser.add_argument('--filters2', type=int, default=64,
         help='Number of filters in second convolutional layer; default 64')
     parser.add_argument('--filters3', type=int, default=128,
         help='Number of filters in second convolutional layer; default 128')
-    parser.add_argument('--dense', type=int, default=128,
-        help='Number of units in dense, fully-connected layer; default 128')
+    parser.add_argument('--dense', type=int, default=256,
+        help='Number of units in dense, fully-connected layer; default 256')
     parser.add_argument('--name', default='',
         help='model directory is <base_dir>/<name>; default '' for <base_dir>')
     parser.add_argument('--base_dir', default='/tmp/cifar10/',
