@@ -81,11 +81,11 @@ if __name__ == '__main__':
     parser.add_argument('--dropout', type=float, default=0.5, 
         help='dropout rate (not retention); 0.0 is no dropout; default 0.5')
     parser.add_argument('--filters1', type=int, default=32,
-        help='Number of filters in first convolutional layer; default 16')
+        help='Number of filters in first convolutional layer; default 32')
     parser.add_argument('--filters2', type=int, default=64,
-        help='Number of filters in second convolutional layer; default 32')
-    parser.add_argument('--filters3', type=int, default=128,
         help='Number of filters in second convolutional layer; default 64')
+    parser.add_argument('--filters3', type=int, default=128,
+        help='Number of filters in second convolutional layer; default 128')
     parser.add_argument('--dense', type=int, default=128,
         help='Number of units in dense, fully-connected layer; default 128')
     parser.add_argument('--name', default='',
