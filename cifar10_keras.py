@@ -11,7 +11,7 @@ from keras.layers import Conv2D, MaxPooling2D, Dense, Dropout
 from keras.layers import Flatten, Activation, BatchNormalization
 from keras.utils import to_categorical
 from keras.callbacks import TensorBoard
-
+from keras.optimizers import Adam
 
 def get_cifar():
     (xtr, ytr), (xte, yte) = cifar10.load_data()
@@ -19,8 +19,8 @@ def get_cifar():
     ytr = to_categorical(ytr)
     yte = to_categorical(yte)
     # x is uint8 0...255; change to float in [0.0, 1.0]
-    xtr = (xtr / 256.0).astype('float32')
-    xte = (xte / 256.0).astype('float32')
+    xtr = (xtr / 255.0).astype('float32')
+    xte = (xte / 255.0).astype('float32')
     return xtr, ytr, xte, yte
 
 def main(args):
@@ -55,7 +55,7 @@ def main(args):
     if args.batchnorm:
         model.add(BatchNormalization(scale=False))
     model.add(Activation('softmax'))
-    model.compile(optimizer='adam',
+    model.compile(optimizer=Adam(lr=args.learn_rate, decay=args.lr_decay),
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
     callbacks = None
@@ -98,6 +98,12 @@ if __name__ == '__main__':
         help='log histograms for TensorBoard; validation must be set to > 0')
     parser.add_argument('--batchnorm', action='store_true', 
         help='Apply batchnorm on all layers')
+    parser.add_argument('--learn_rate', type=float, default=0.001,
+        help='Learning rate; default 0.001; ' +
+        'NB: w/Adam optimizer this parameter is less important.')
+    parser.add_argument('--lr_decay', type=float, default=0.0,
+        help='Learning rate decay; default 0.0; ' +
+        'NB: w/Adam optimizer this parameter is less important.')
     args, _ = parser.parse_known_args()
     results = main(args)
     print('Loss: %.4f   Acc: %.4f' % tuple(results))
