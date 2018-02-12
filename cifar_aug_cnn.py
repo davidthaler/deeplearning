@@ -11,6 +11,8 @@ from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
 from keras.preprocessing.image import ImageDataGenerator
 from keras.utils import to_categorical
+from keras.models import load_model
+from keras.callbacks import ModelCheckpoint
 
 def get_cifar():
     (xtr, ytr), (xte, yte) = cifar10.load_data()
@@ -57,14 +59,22 @@ def build_model(args):
     return model
 
 def run(args):
+    savepath = os.path.join(args.base_dir, args.name)
     xtr, ytr, xte, yte = get_cifar()
     datagen = get_datagen(xtr, args)
-    model = build_model(args)
+    if args.restore:
+        model = load_model(savepath)
+    else:
+        model = build_model(args)
+    callbacks = None
+    if args.save:
+        callbacks = [ModelCheckpoint(savepath, verbose=1)]
     # fchollet says steps_per_epoch not needed if x, y are ndarray
     model.fit_generator(datagen.flow(xtr, ytr, batch_size=args.batch_sz),
                         validation_data=(xte, yte),
                         workers=4,
-                        epochs=args.epochs)
+                        epochs=args.epochs,
+                        callbacks=callbacks)
     results = model.evaluate(xte, yte)
     return results
 
@@ -97,8 +107,12 @@ if __name__ == '__main__':
         help='Number of units in dense, fully-connected layer; default 256')
     parser.add_argument('--name', default='',
         help='model directory is <base_dir>/<name>; default '' for <base_dir>')
-    parser.add_argument('--base_dir', default='/tmp/cifar10/',
-        help='base of estimator model_dir; default /tmp/cifar10/')
+    parser.add_argument('--base_dir', default='/tmp/cifar10aug/',
+        help='base of estimator model_dir; default /tmp/cifar10aug/')
+    parser.add_argument('--restore', action='store_true',
+        help='restore from base_dir/name; if set, will ignore filtersN/dense')
+    parser.add_argument('--save', action='store_true',
+        help='save model at base_dir/name; overwrites anything there')
     args, _ = parser.parse_known_args()
     results = run(args)
     print('Loss: %.4f   Acc: %.4f' % tuple(results))
