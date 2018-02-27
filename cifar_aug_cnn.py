@@ -68,8 +68,9 @@ def run(args):
         model = build_model(args)
     callbacks = None
     if args.save:
+        if not os.path.exists(args.base_dir):
+            os.makedirs(args.base_dir)
         callbacks = [ModelCheckpoint(savepath, verbose=1)]
-    # fchollet says steps_per_epoch not needed if x, y are ndarray
     model.fit_generator(datagen.flow(xtr, ytr, batch_size=args.batch_sz),
                         validation_data=(xte, yte),
                         workers=4,
